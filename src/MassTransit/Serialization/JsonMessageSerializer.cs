@@ -51,6 +51,7 @@ namespace MassTransit.Serialization
 
         public static JsonSerializerSettings DeserializerSettings = new JsonSerializerSettings
         {
+            TypeNameHandling = TypeNameHandling.Auto,
             NullValueHandling = NullValueHandling.Ignore,
             DefaultValueHandling = DefaultValueHandling.Ignore,
             MissingMemberHandling = MissingMemberHandling.Ignore,

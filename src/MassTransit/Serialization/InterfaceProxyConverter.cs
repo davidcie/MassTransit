@@ -15,6 +15,7 @@ namespace MassTransit.Serialization
 	using System;
 	using Magnum.Reflection;
 	using Newtonsoft.Json;
+	using Newtonsoft.Json.Linq;
 
 	public class InterfaceProxyConverter :
 		JsonConverter
@@ -26,12 +27,22 @@ namespace MassTransit.Serialization
 
 		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 		{
+			// try to deserialize first, perhaps type information is
+			// hidden within the message and Json.NET can do the job
+			object direct = serializer.Deserialize(reader);
+			if (direct != null && objectType.IsInstanceOfType(direct))
+			{
+				return direct;
+			}
+
+			// direct deserialization failed, we need a proxy type after all
 			Type proxyType = InterfaceImplementationBuilder.GetProxyFor(objectType);
-
-			object obj = FastActivator.Create(proxyType);
-			serializer.Populate(reader, obj);
-
-			return obj;
+			object proxy = FastActivator.Create(proxyType);
+			using (var tokens = new JTokenReader((JObject)direct))
+			{
+				serializer.Populate(tokens, proxy);
+			}
+			return proxy;
 		}
 
 		public override bool CanConvert(Type objectType)
