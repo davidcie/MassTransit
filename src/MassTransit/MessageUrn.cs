@@ -95,13 +95,12 @@ namespace MassTransit
 		static string GetMessageName(StringBuilder sb, Type type, bool includeScope)
 		{
             if (type.IsGenericParameter)
-                return "";
+                return string.Empty;
 
 			if (includeScope && type.Namespace != null)
 			{
 				string ns = type.Namespace;
 				sb.Append(ns);
-
 				sb.Append(':');
 			}
 
@@ -117,9 +116,8 @@ namespace MassTransit
 
                 //remove `1
 			    int index = name.IndexOf('`');
-                if(index > 0)
+                if (index > 0)
 			        name = name.Remove(index);
-                //
 
 			    sb.Append(name);
 				sb.Append('[');
@@ -139,6 +137,9 @@ namespace MassTransit
 			}
 			else
 				sb.Append(type.Name);
+
+			sb.Append(':');
+			sb.Append(type.Assembly.GetName().Name);
 
 			return sb.ToString();
 		}
