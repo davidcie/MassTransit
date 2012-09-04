@@ -61,7 +61,7 @@ namespace MassTransit
 			else
 				return null;
 
-			Type messageType = Type.GetType(typeName, true, true);
+			Type messageType = Type.GetType(typeName, throwOnError, ignoreCase);
 
 			return messageType;
 		}
