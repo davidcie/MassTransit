@@ -74,30 +74,10 @@ namespace MassTransit.RequestResponse
         {
             try
             {
-                if (_context != null)
-                {
-                    _context.Post(state =>
-                        {
-                            try
-                            {
-                                Action<IConsumeContext<TResponse>> handler = _handler(context);
-                                handler(context);
+                Action<IConsumeContext<TResponse>> handler = _handler(context);
+                handler(context);
 
-                                Success(context);
-                            }
-                            catch (Exception ex)
-                            {
-                                Failure(context, ex);
-                            }
-                        }, state: null);
-                }
-                else
-                {
-                    Action<IConsumeContext<TResponse>> handler = _handler(context);
-                    handler(context);
-
-                    Success(context);
-                }
+                Success(context);
             }
             catch (Exception ex)
             {
