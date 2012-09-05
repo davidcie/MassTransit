@@ -70,8 +70,11 @@ namespace MassTransit.Serialization
                 object obj = null;
                 if (typeof(T).IsInterface && typeof(T).IsAllowedMessageType())
                 {
-                    Type proxyType = InterfaceImplementationBuilder.GetProxyFor(typeof(T));
-                    UsingReader(jsonReader => { obj = _serializer.Deserialize(jsonReader, proxyType); });
+                    Type implementation = GetInterfaceImplementation(typeof(T));
+                    if (!_mapped.TryGetValue(implementation, out obj))
+                    {
+                        UsingReader(jsonReader => { obj = _serializer.Deserialize(jsonReader, implementation); });
+                    }
                 }
                 else
                 {
@@ -96,6 +99,18 @@ namespace MassTransit.Serialization
             {
                 callback(jsonReader);
             }
+        }
+
+        Type GetInterfaceImplementation(Type @interface)
+        {
+            // try to find an existing interface implenetation
+            Type implementation = _supportedTypes
+                .Select(t => new MessageUrn(t).GetType(false, false))
+                .Where(t => t != null)
+                .FirstOrDefault(type => !type.IsInterface && @interface.IsAssignableFrom(type));
+
+            // failing that, construct a proxy
+            return implementation ?? InterfaceImplementationBuilder.GetProxyFor(@interface);
         }
     }
 }
