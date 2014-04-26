@@ -13,6 +13,7 @@
 namespace MassTransit.Tests
 {
     using System;
+    using System.Diagnostics;
     using Exceptions;
     using Magnum.Extensions;
     using Magnum.TestFramework;
@@ -248,6 +249,38 @@ namespace MassTransit.Tests
 
             pingReceived.IsAvailable(timeout).ShouldBeTrue("The ping was not received");
             pongReceived.IsAvailable(timeout).ShouldBeTrue("The pong was not received");
+        }
+
+        [Test]
+        public void Should_throw_an_exception_if_a_fault_was_published()
+        {
+            var pongReceived = new FutureMessage<PongMessage>();
+            var faultReceived = new FutureMessage<Fault<PingMessage>>();
+            var pingReceived = new FutureMessage<PingMessage>();
+
+            RemoteBus.SubscribeContextHandler<PingMessage>(x =>
+                {
+                    pingReceived.Set(x.Message);
+
+                    throw new InvalidOperationException("This should carry over to the calling request");
+                });
+            LocalBus.ShouldHaveSubscriptionFor<PingMessage>();
+
+            var ping = new PingMessage();
+
+            TimeSpan timeout = Debugger.IsAttached ? 5.Minutes() : 24.Seconds();
+
+            LocalBus.PublishRequest(ping, x =>
+                {
+                    x.Handle<PongMessage>(pongReceived.Set);
+                    x.HandleFault(faultReceived.Set);
+
+                    x.SetTimeout(timeout);
+                });
+ 
+            pingReceived.IsAvailable(timeout).ShouldBeTrue("The ping was not received");
+            faultReceived.IsAvailable(timeout).ShouldBeTrue("The fault was not received");
+            pongReceived.IsAvailable(1.Seconds()).ShouldBeFalse("The pong was not received");
         }
 
         [Test, Category("NotOnTeamCity")]

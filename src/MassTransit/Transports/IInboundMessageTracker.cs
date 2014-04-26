@@ -13,6 +13,8 @@
 namespace MassTransit.Transports
 {
     using System;
+    using System.Collections.Generic;
+
 
     /// <summary>
     /// Tracks the inbound processing of messages by the endpoint. Once a message is 
@@ -23,19 +25,39 @@ namespace MassTransit.Transports
     public interface IInboundMessageTracker
     {
         /// <summary>
+        /// Returns true if retries are allowed
+        /// </summary>
+        bool IsRetryEnabled { get; }
+
+        /// <summary>
         /// Check if the message retry limit has been exceeded for the id specified.
         /// </summary>
         /// <param name="id">The message identifier</param>
         /// <param name="retryException">The exception to throw in association with the error queue</param>
+        /// <param name="faultActions">The actions to invoke that were due to the fault</param>
         /// <returns>True if the message should no longer be processed and moved to the error queue</returns>
-        bool IsRetryLimitExceeded(string id, out Exception retryException);
+        bool IsRetryLimitExceeded(string id, out Exception retryException, out IEnumerable<Action> faultActions);
+
+        /// <summary>
+        /// Increment the retry count of the message without an exception or fault action
+        /// </summary>
+        /// <param name="id">The message identifier</param>
+        bool IncrementRetryCount(string id);
 
         /// <summary>
         /// Increment the retry count of the message as an exception has occurred.
         /// </summary>
         /// <param name="id">The message identifier</param>
         /// <param name="exception">The exception that was thrown by the consumer(s)</param>
-        void IncrementRetryCount(string id, Exception exception);
+        bool IncrementRetryCount(string id, Exception exception);
+
+        /// <summary>
+        /// Increment the retry count of the message as an exception has occurred.
+        /// </summary>
+        /// <param name="id">The message identifier</param>
+        /// <param name="exception">The exception that was thrown by the consumer(s)</param>
+        /// <param name="faultActions">The list of actions to invoke due to the fault</param>
+        bool IncrementRetryCount(string id, Exception exception, IEnumerable<Action> faultActions);
 
         /// <summary>
         /// Marks the message as received successfully. This should remove the message tracking information

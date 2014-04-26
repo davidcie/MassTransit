@@ -13,11 +13,24 @@
 namespace MassTransit.RequestResponse.Configurators
 {
     using System;
+    using System.Threading;
 
     public interface InlineRequestConfigurator<TRequest> :
         RequestConfigurator<TRequest>
         where TRequest : class
     {
+        /// <summary>
+        /// Sets the synchronization context for the response and timeout handlers to 
+        /// the current synchronization context
+        /// </summary>
+        void UseCurrentSynchronizationContext();
+
+        /// <summary>
+        /// Sets the synchronization context to the specified synchronization context
+        /// </summary>
+        /// <param name="synchronizationContext"></param>
+        void SetSynchronizationContext(SynchronizationContext synchronizationContext);
+
         /// <summary>
         /// Configures a handler to be called if a response of the specified type
         /// is received. Once received, the request completes by default unless
@@ -37,5 +50,17 @@ namespace MassTransit.RequestResponse.Configurators
         /// <param name="handler">The handler to call with the response message</param>
         void Handle<TResponse>(Action<IConsumeContext<TResponse>, TResponse> handler)
             where TResponse : class;
+
+        /// <summary>
+        /// Specifies a handler for a fault published by the request handler
+        /// </summary>
+        /// <param name="faultCallback"></param>
+        void HandleFault(Action<Fault<TRequest>> faultCallback);
+
+        /// <summary>
+        /// Specifies a handler for a fault published by the request handler
+        /// </summary>
+        /// <param name="faultCallback"></param>
+        void HandleFault(Action<IConsumeContext<Fault<TRequest>>, Fault<TRequest>> faultCallback);
     }
 }

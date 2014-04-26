@@ -321,161 +321,161 @@ namespace MassTransit.Tests.Serialization
 		}
 	}
 
-	[TestFixture]
-	public class Using_JsonConverterAttribute_on_a_class :
-		SerializationTest<JsonMessageSerializer>
-	{
-		public class ModifyWhenSerializingConverter : JsonConverter
-		{
-			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				writer.WriteStartObject();
+    [TestFixture]
+  public class Using_JsonConverterAttribute_on_a_class :
+    SerializationTest<JsonMessageSerializer>
+  {
+    public class ModifyWhenSerializingConverter : JsonConverter
+    {
+      public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+      {
+        writer.WriteStartObject();
 
-				writer.WritePropertyName("value");
-				writer.WriteValue("Monster");
+        writer.WritePropertyName("value");
+        writer.WriteValue("Monster");
 
-				writer.WriteEndObject();
-			}
+        writer.WriteEndObject();
+      }
 
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				reader.Read();
-				reader.Value.ShouldEqual("value");
-				reader.Read();
-				var value = (string)reader.Value;
-				return new MessageA { Value = value };
-			}
+      public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+      {
+        reader.Read();
+        reader.Value.ShouldEqual("value");
+        reader.Read();
+        var value = (string)reader.Value;
+        return new MessageA { Value = value };
+      }
 
-			public override bool CanConvert(Type objectType)
-			{
-				return typeof(MessageA).IsAssignableFrom(objectType);
-			}
-		}
+      public override bool CanConvert(Type objectType)
+      {
+        return typeof(MessageA).IsAssignableFrom(objectType);
+      }
+    }
 
-		public class ModifyWhenDeserializingConverter : JsonConverter
-		{
-			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				var testMessage = (MessageB)value;
-				writer.WriteStartObject();
+    public class ModifyWhenDeserializingConverter : JsonConverter
+    {
+      public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+      {
+        var testMessage = (MessageB)value;
+        writer.WriteStartObject();
 
-				writer.WritePropertyName("value");
-				writer.WriteValue(testMessage.Value);
+        writer.WritePropertyName("value");
+        writer.WriteValue(testMessage.Value);
 
-				writer.WriteEndObject();
-			}
+        writer.WriteEndObject();
+      }
 
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				return new MessageB { Value = "Monster" };
-			}
+      public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+      {
+        return new MessageB { Value = "Monster" };
+      }
 
-			public override bool CanConvert(Type objectType)
-			{
-				return typeof(MessageB).IsAssignableFrom(objectType);
-			}
-		}
+      public override bool CanConvert(Type objectType)
+      {
+        return typeof(MessageB).IsAssignableFrom(objectType);
+      }
+    }
 
-		[JsonConverter(typeof(ModifyWhenSerializingConverter))]
-		public class MessageA
-		{
-			public string Value { get; set; }
-		}
+    [JsonConverter(typeof(ModifyWhenSerializingConverter))]
+    public class MessageA
+    {
+      public string Value { get; set; }
+    }
 
-		[JsonConverter(typeof(ModifyWhenDeserializingConverter))]
-		public class MessageB
-		{
-			public string Value { get; set; }
-		}
+    [JsonConverter(typeof(ModifyWhenDeserializingConverter))]
+    public class MessageB
+    {
+      public string Value { get; set; }
+    }
 
-		[Test]
-		public void Should_use_converter_for_serialization()
-		{
-			var obj = new MessageA { Value = "Joe" };
+    [Test]
+    public void Should_use_converter_for_serialization()
+    {
+      var obj = new MessageA { Value = "Joe" };
 
-			MessageA result = SerializeAndReturn(obj);
+      MessageA result = SerializeAndReturn(obj);
 
-			result.Value.ShouldEqual("Monster");
-		}
+      result.Value.ShouldEqual("Monster");
+    }
 
-		[Test]
-		public void Should_use_converter_for_deserialization()
-		{
-			var obj = new MessageB { Value = "Joe" };
+    [Test]
+    public void Should_use_converter_for_deserialization()
+    {
+      var obj = new MessageB { Value = "Joe" };
 
-			MessageB result = SerializeAndReturn(obj);
+      MessageB result = SerializeAndReturn(obj);
 
-			result.Value.ShouldEqual("Monster");
-		}
-	}
+      result.Value.ShouldEqual("Monster");
+    }
+  }
 
-	[TestFixture]
-	public class Using_JsonConverterAttribute_on_a_property :
-		SerializationTest<JsonMessageSerializer>
-	{
-		public class ModifyWhenSerializingConverter : JsonConverter
-		{
-			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				writer.WriteValue("Monster");
-			}
+  [TestFixture]
+  public class Using_JsonConverterAttribute_on_a_property :
+    SerializationTest<JsonMessageSerializer>
+  {
+    public class ModifyWhenSerializingConverter : JsonConverter
+    {
+      public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+      {
+        writer.WriteValue("Monster");
+      }
 
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				return reader.Value;
-			}
+      public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+      {
+        return reader.Value;
+      }
 
-			public override bool CanConvert(Type objectType)
-			{
-				return typeof(string).IsAssignableFrom(objectType);
-			}
-		}
+      public override bool CanConvert(Type objectType)
+      {
+        return typeof(string).IsAssignableFrom(objectType);
+      }
+    }
 
-		public class ModifyWhenDeserializingConverter : JsonConverter
-		{
-			public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-			{
-				writer.WriteValue((string)value);
-			}
+    public class ModifyWhenDeserializingConverter : JsonConverter
+    {
+      public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+      {
+        writer.WriteValue((string)value);
+      }
 
-			public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-			{
-				return "Monster";
-			}
+      public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+      {
+        return "Monster";
+      }
 
-			public override bool CanConvert(Type objectType)
-			{
-				return typeof(string).IsAssignableFrom(objectType);
-			}
-		}
+      public override bool CanConvert(Type objectType)
+      {
+        return typeof(string).IsAssignableFrom(objectType);
+      }
+    }
 
-		public class SimpleMessage
-		{
-			[JsonConverter(typeof(ModifyWhenSerializingConverter))]
-			public string ValueA { get; set; }
+    public class SimpleMessage
+    {
+      [JsonConverter(typeof(ModifyWhenSerializingConverter))]
+      public string ValueA { get; set; }
 
-			[JsonConverter(typeof(ModifyWhenDeserializingConverter))]
-			public string ValueB { get; set; }
-		}
+      [JsonConverter(typeof(ModifyWhenDeserializingConverter))]
+      public string ValueB { get; set; }
+    }
 
-		[Test]
-		public void Should_use_converter_for_serialization()
-		{
-			var obj = new SimpleMessage { ValueA = "Joe" };
+    [Test]
+    public void Should_use_converter_for_serialization()
+    {
+      var obj = new SimpleMessage { ValueA = "Joe" };
 
-			SimpleMessage result = SerializeAndReturn(obj);
+      SimpleMessage result = SerializeAndReturn(obj);
 
-			result.ValueA.ShouldEqual("Monster");
-		}
+      result.ValueA.ShouldEqual("Monster");
+    }
 
-		[Test]
-		public void Should_use_converter_for_deserialization()
-		{
-			var obj = new SimpleMessage { ValueB = "Joe" };
+    [Test]
+    public void Should_use_converter_for_deserialization()
+    {
+      var obj = new SimpleMessage { ValueB = "Joe" };
 
-			SimpleMessage result = SerializeAndReturn(obj);
+      SimpleMessage result = SerializeAndReturn(obj);
 
-			result.ValueB.ShouldEqual("Monster");
-		}
-	}
+      result.ValueB.ShouldEqual("Monster");
+    }
+  }
 }

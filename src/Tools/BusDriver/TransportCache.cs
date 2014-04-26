@@ -23,26 +23,27 @@ namespace BusDriver
 		IDisposable
 	{
 		readonly IDictionary<string, ITransportFactory> _transportFactories;
-		readonly IDictionary<string, IDuplexTransport> _transports;
+		readonly IDictionary<string, IInboundTransport> _inboundTransports;
+		readonly IDictionary<string, IOutboundTransport> _outboundTransports;
 		bool _disposed;
 
 		public TransportCache()
 		{
 			_transportFactories = new Dictionary<string, ITransportFactory>();
-			_transports = new Dictionary<string, IDuplexTransport>();
+            _inboundTransports = new Dictionary<string, IInboundTransport>();
+            _outboundTransports = new Dictionary<string, IOutboundTransport>();
 		}
 
 		public void Dispose()
 		{
 			Dispose(true);
-			GC.SuppressFinalize(this);
 		}
 
-		public IDuplexTransport GetTransport(Uri uri)
+        public IInboundTransport GetInboundTransport(Uri uri)
 		{
 			string key = uri.ToString().ToLowerInvariant();
-			IDuplexTransport transport;
-			if (_transports.TryGetValue(key, out transport))
+            IInboundTransport transport;
+            if (_inboundTransports.TryGetValue(key, out transport))
 				return transport;
 
 			string scheme = uri.Scheme.ToLowerInvariant();
@@ -53,15 +54,46 @@ namespace BusDriver
 				try
 				{
 					ITransportSettings settings = new TransportSettings(new EndpointAddress(uri));
-					transport = transportFactory.BuildLoopback(settings);
+					transport = transportFactory.BuildInbound(settings);
 
-					_transports.Add(uri.ToString().ToLowerInvariant(), transport);
+                    _inboundTransports.Add(uri.ToString().ToLowerInvariant(), transport);
 
 					return transport;
 				}
 				catch (Exception ex)
 				{
-					throw new TransportException(uri, "Failed to create transport", ex);
+					throw new TransportException(uri, "Failed to create inbound transport", ex);
+				}
+			}
+
+			throw new TransportException(uri,
+				"The {0} scheme was not handled by any registered transport.".FormatWith(uri.Scheme));
+		}
+
+        public IOutboundTransport GetOutboundTransport(Uri uri)
+		{
+			string key = uri.ToString().ToLowerInvariant();
+            IOutboundTransport transport;
+            if (_outboundTransports.TryGetValue(key, out transport))
+				return transport;
+
+			string scheme = uri.Scheme.ToLowerInvariant();
+
+			ITransportFactory transportFactory;
+			if (_transportFactories.TryGetValue(scheme, out transportFactory))
+			{
+				try
+				{
+					ITransportSettings settings = new TransportSettings(new EndpointAddress(uri));
+					transport = transportFactory.BuildOutbound(settings);
+
+                    _outboundTransports.Add(uri.ToString().ToLowerInvariant(), transport);
+
+					return transport;
+				}
+				catch (Exception ex)
+				{
+					throw new TransportException(uri, "Failed to create outbound transport", ex);
 				}
 			}
 
@@ -81,16 +113,12 @@ namespace BusDriver
 			if (_disposed) return;
 			if (disposing)
 			{
-				_transports.Values.Each(x => x.Dispose());
+				_inboundTransports.Values.Each(x => x.Dispose());
+				_outboundTransports.Values.Each(x => x.Dispose());
 				_transportFactories.Values.Each(x => x.Dispose());
 			}
 
 			_disposed = true;
-		}
-
-		~TransportCache()
-		{
-			Dispose(false);
 		}
 	}
 }

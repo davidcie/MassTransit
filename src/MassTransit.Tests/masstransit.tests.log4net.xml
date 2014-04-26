@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <log4net>
   <root>
-    <level value="ALL" />
+    <level value="ERROR" />
     <appender-ref ref="LogFileAppender" />
     <appender-ref ref="console" />
   </root>

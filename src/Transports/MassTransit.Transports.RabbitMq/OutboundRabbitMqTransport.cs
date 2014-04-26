@@ -14,10 +14,13 @@ namespace MassTransit.Transports.RabbitMq
 {
     using System;
     using System.Collections;
+    using System.Globalization;
     using System.IO;
+    using Exceptions;
     using Magnum;
     using RabbitMQ.Client;
     using RabbitMQ.Client.Exceptions;
+    using System.Linq;
 
     public class OutboundRabbitMqTransport :
         IOutboundTransport
@@ -50,7 +53,7 @@ namespace MassTransit.Transports.RabbitMq
                     {
                         IBasicProperties properties = _producer.CreateProperties();
 
-                        properties.SetPersistent(true);
+                        properties.SetPersistent(context.DeliveryMode == DeliveryMode.Persistent);
                         properties.MessageId = context.MessageId ?? properties.MessageId ?? NewId.Next().ToString();
                         if (context.ExpirationTime.HasValue)
                         {
@@ -59,19 +62,31 @@ namespace MassTransit.Transports.RabbitMq
                                 (value.Kind == DateTimeKind.Utc
                                      ? value - SystemUtil.UtcNow
                                      : value - SystemUtil.Now).
-                                    ToString();
+                                    TotalMilliseconds.ToString("F0", CultureInfo.InvariantCulture);
                         }
 
                         using (var body = new MemoryStream())
                         {
                             context.SerializeTo(body);
-                            properties.Headers = new Hashtable {{"Content-Type", context.ContentType}};
+                            properties.Headers = context.Headers.ToDictionary(entry => entry.Key, entry => (object)entry.Value);
+                            properties.Headers["Content-Type"]=context.ContentType;
 
+#if NET40
+                            var task = _producer.PublishAsync(_address.Name, properties, body.ToArray());
+                            task.Wait();
+#else
                             _producer.Publish(_address.Name, properties, body.ToArray());
+#endif
 
-                            _address.LogSent(context.MessageId ?? "", context.MessageType);
+                            _address.LogSent(context.MessageId ?? properties.MessageId ?? "", context.MessageType);
                         }
                     }
+#if NET40
+                    catch (AggregateException ex)
+                    {
+                        throw new TransportException(_address.Uri, "Publisher did not confirm message", ex.InnerException);
+                    }
+#endif
                     catch (AlreadyClosedException ex)
                     {
                         throw new InvalidConnectionException(_address.Uri, "Connection was already closed", ex);

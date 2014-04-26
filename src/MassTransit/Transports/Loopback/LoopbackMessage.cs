@@ -37,6 +37,7 @@ namespace MassTransit.Transports.Loopback
             private set { _body = value; }
         }
 
+        public string OriginalMessageId { get; set; }
         public string ContentType { get; set; }
         public DateTime? ExpirationTime { get; set; }
         public string MessageId { get; private set; }
@@ -44,7 +45,6 @@ namespace MassTransit.Transports.Loopback
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         void Dispose(bool disposing)
@@ -56,11 +56,6 @@ namespace MassTransit.Transports.Loopback
             }
 
             _disposed = true;
-        }
-
-        ~LoopbackMessage()
-        {
-            Dispose(false);
         }
     }
 }

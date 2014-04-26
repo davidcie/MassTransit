@@ -23,6 +23,7 @@ namespace MassTransit.SubscriptionBuilders
         readonly IServiceBus _bus;
         readonly IList<Func<IServiceBus, SubscriptionRouter, SubscriptionObserver>> _observers;
         string _network;
+        Func<SubscriptionStorage> _subscriptionStorageFactory;
 
         public SubscriptionRouterBuilderImpl(IServiceBus bus, string network)
         {
@@ -32,11 +33,8 @@ namespace MassTransit.SubscriptionBuilders
                 {
                     (b, c) => new BusSubscriptionConnector(b)
                 };
-        }
 
-        public string Network
-        {
-            get { return _network; }
+            _subscriptionStorageFactory = () => new InMemorySubscriptionStorage();
         }
 
         public void SetNetwork(string network)
@@ -57,9 +55,18 @@ namespace MassTransit.SubscriptionBuilders
             _observers.Add(observerFactory);
         }
 
+        public void UseSubscriptionStorage(Func<SubscriptionStorage> subscriptionStorageFactory)
+        {
+            _subscriptionStorageFactory = subscriptionStorageFactory;
+        }
+
         public SubscriptionRouterService Build()
         {
-            var service = new SubscriptionRouterService(_bus, _network);
+            SubscriptionStorage storage = _subscriptionStorageFactory();
+
+            var repository = new BusSubscriptionRepository(_bus.ControlBus.Endpoint.Address.Uri, storage);
+
+            var service = new SubscriptionRouterService(_bus, repository, _network);
 
             _observers.Each(x => service.AddObserver(x(_bus, service)));
 

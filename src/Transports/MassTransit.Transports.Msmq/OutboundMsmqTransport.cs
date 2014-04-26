@@ -45,7 +45,8 @@ namespace MassTransit.Transports.Msmq
                 if (!string.IsNullOrEmpty(context.MessageType))
                     message.Label = context.MessageType.Length > 249 ? context.MessageType.Substring(0, 249) : context.MessageType;
 
-                message.Recoverable = true;
+                message.Recoverable = _address.IsRecoverable && context.DeliveryMode == DeliveryMode.Persistent;
+                message.UseDeadLetterQueue = true; // in case lack of permission message will be redirected to dead letter
 
                 if (context.ExpirationTime.HasValue)
                 {
@@ -55,19 +56,21 @@ namespace MassTransit.Transports.Msmq
 
                 context.SerializeTo(message.BodyStream);
 
-                if (context.ContentType != null)
-                {
-                    var headers = new TransportMessageHeaders();
-                    headers.Add("Content-Type", context.ContentType);
+                var headers = new TransportMessageHeaders();
 
-                    message.Extension = headers.GetBytes();
-                }
+                if (!string.IsNullOrEmpty(context.ContentType))
+                    headers.Add("Content-Type", context.ContentType);
+                if (!string.IsNullOrEmpty(context.OriginalMessageId))
+                    headers.Add("Original-Message-Id", context.OriginalMessageId);
+                
+                message.Extension = headers.GetBytes();
 
                 try
                 {
                     _connectionHandler.Use(connection => SendMessage(connection.Queue, message));
 
                     _address.LogSent(message.Id, context.MessageType);
+
                 }
                 catch (MessageQueueException ex)
                 {
@@ -79,7 +82,6 @@ namespace MassTransit.Transports.Msmq
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         protected virtual void SendMessage(MessageQueue queue, Message message)
@@ -136,11 +138,6 @@ namespace MassTransit.Transports.Msmq
                 default:
                     throw new InvalidConnectionException(_address.Uri, "There was a problem communicating with the message queue", ex);
             }
-        }
-
-        ~OutboundMsmqTransport()
-        {
-            Dispose(false);
         }
     }
 }

@@ -69,7 +69,7 @@ namespace MassTransit
         /// and operation.
         /// </summary>
         public ServiceBus(IEndpoint endpointToListenOn,
-            IEndpointCache endpointCache)
+            IEndpointCache endpointCache, bool enablePerformanceCounters)
         {
             ReceiveTimeout = TimeSpan.FromSeconds(3);
             Guard.AgainstNull(endpointToListenOn, "endpointToListenOn", "This parameter cannot be null");
@@ -87,7 +87,8 @@ namespace MassTransit
 
             ControlBus = this;
 
-            InitializePerformanceCounters();
+            if(enablePerformanceCounters)
+                InitializePerformanceCounters();
         }
 
         public int ConcurrentReceiveThreads
@@ -129,6 +130,8 @@ namespace MassTransit
             }
         }
 
+        public TimeSpan ShutdownTimeout { get; set; }
+
         public UntypedChannel EventChannel
         {
             get { return _eventChannel; }
@@ -145,7 +148,6 @@ namespace MassTransit
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         public void Publish<T>(T message)
@@ -242,7 +244,7 @@ namespace MassTransit
             if (contextCallback == null)
                 throw new ArgumentNullException("contextCallback");
 
-            BusObjectPublisherCache.Instance[messageType].Publish(this, message);
+            BusObjectPublisherCache.Instance[messageType].Publish(this, message, contextCallback);
         }
 
         /// <summary>
@@ -423,7 +425,8 @@ namespace MassTransit
         {
             try
             {
-                string instanceName = string.Format("{0}", Endpoint.Address.Uri);
+                string instanceName = string.Format("{0}_{1}{2}",
+                    Endpoint.Address.Uri.Scheme, Endpoint.Address.Uri.Host, Endpoint.Address.Uri.AbsolutePath.Replace("/", "_"));
 
                 _counters = new ServiceBusInstancePerformanceCounters(instanceName);
 

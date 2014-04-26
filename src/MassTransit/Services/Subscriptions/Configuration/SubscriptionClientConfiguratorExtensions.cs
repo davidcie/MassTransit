@@ -1,4 +1,4 @@
-﻿// Copyright 2007-2012 Chris Patterson, Dru Sellers, Travis Smith, et. al.
+﻿// Copyright 2007-2013 Chris Patterson, Dru Sellers, Travis Smith, et. al.
 //  
 // Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 // this file except in compliance with the License. You may obtain a copy of the 
@@ -20,17 +20,37 @@ namespace MassTransit
 
     public static class SubscriptionClientConfiguratorExtensions
     {
+        /// <summary>
+        /// Sets the address of the Subscription Service which routes messages to multiple subscribers
+        /// from a single publisher.  The address of the Subscription Service is used by both 
+        /// publishers and subscribers, while routing is carried out by MassTransit.RuntimeServices
+        /// </summary>
+        /// <param name="configurator"></param>
+        /// <param name="subscriptionServiceUri"></param>
+        [Obsolete("The extension method on UseMsmq should be used instead")]
         public static void UseSubscriptionService(this ServiceBusConfigurator configurator,
             string subscriptionServiceUri)
         {
             configurator.UseSubscriptionService(x => x.SetSubscriptionServiceEndpoint(subscriptionServiceUri.ToUri()));
         }
 
+        /// <summary>
+        /// Sets the address of the Subscription Service which routes messages to multiple subscribers
+        /// from a single publisher.  The address of the Subscription Service is used by both 
+        /// publishers and subscribers, while routing is carried out by MassTransit.RuntimeServices
+        /// </summary>
+        [Obsolete("The extension method on UseMsmq should be used instead")]
         public static void UseSubscriptionService(this ServiceBusConfigurator configurator, Uri subscriptionServiceUri)
         {
             configurator.UseSubscriptionService(x => x.SetSubscriptionServiceEndpoint(subscriptionServiceUri));
         }
 
+        /// <summary>
+        /// Sets the address of the Subscription Service which routes messages to multiple subscribers
+        /// from a single publisher.  The address of the Subscription Service is used by both 
+        /// publishers and subscribers, while routing is carried out by MassTransit.RuntimeServices
+        /// </summary>
+        [Obsolete("The extension method on UseMsmq should be used instead")]
         public static void UseSubscriptionService(this ServiceBusConfigurator configurator,
             Action<SubscriptionClientConfigurator> configureCallback)
         {
@@ -40,7 +60,7 @@ namespace MassTransit
 
             var routerBuilderConfigurator = new SubscriptionRouterBuilderConfiguratorImpl(x => x.SetNetwork(null));
 
-            configurator.AddSubscriptionCoordinatorConfigurator(routerBuilderConfigurator);
+            configurator.AddSubscriptionRouterConfigurator(routerBuilderConfigurator);
 
             configurator.AddSubscriptionObserver(clientConfigurator.Create);
         }

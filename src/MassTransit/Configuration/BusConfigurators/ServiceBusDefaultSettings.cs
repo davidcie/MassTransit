@@ -21,9 +21,11 @@ namespace MassTransit.BusConfigurators
 		{
 			AutoStart = true;
 			ReceiveTimeout = 3.Seconds();
+		    ShutdownTimeout = 60.Seconds();
 			ConcurrentReceiverLimit = 1;
 			ConcurrentConsumerLimit = Environment.ProcessorCount*4;
 			Network = Environment.MachineName.ToLowerInvariant();
+		    EnablePerformanceCounters = true;
 		}
 
 		public bool AutoStart { get; set; }
@@ -31,6 +33,8 @@ namespace MassTransit.BusConfigurators
 		public int ConcurrentReceiverLimit { get; set; }
 		public IEndpointCache EndpointCache { get; set; }
 		public TimeSpan ReceiveTimeout { get; set; }
+        public TimeSpan ShutdownTimeout { get; set; }
 		public string Network { get; set; }
+		public bool EnablePerformanceCounters { get; set; }
 	}
 }

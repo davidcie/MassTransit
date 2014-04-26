@@ -52,6 +52,8 @@ namespace MassTransit
         /// </summary>
         Type DeclaringMessageType { get; }
 
+        string OriginalMessageId { get; }
+
         void SetMessageType(string messageType);
 
         void SetRequestId(string value);
@@ -77,6 +79,14 @@ namespace MassTransit
         void SetUsing(IMessageContext context);
 
         void SetHeader(string key, string value);
+
+        /// <summary>
+        /// Set the delivery mode of the message
+        /// </summary>
+        /// <param name="deliveryMode"></param>
+        void SetDeliveryMode(DeliveryMode deliveryMode);
+
+        DeliveryMode DeliveryMode { get; }
 
         /// <summary>
         /// Serializes the message to the stream

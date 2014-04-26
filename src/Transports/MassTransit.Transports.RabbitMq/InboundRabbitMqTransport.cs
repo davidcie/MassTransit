@@ -13,12 +13,13 @@
 namespace MassTransit.Transports.RabbitMq
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Text;
-    using System.Threading;
     using Context;
     using Logging;
-    using RabbitMQ.Client;
+    using RabbitMQ.Client.Events;
     using RabbitMQ.Client.Exceptions;
 
     public class InboundRabbitMqTransport :
@@ -32,6 +33,7 @@ namespace MassTransit.Transports.RabbitMq
         readonly bool _purgeExistingMessages;
         RabbitMqConsumer _consumer;
         bool _disposed;
+        RabbitMqPublisher _publisher;
 
         public InboundRabbitMqTransport(IRabbitMqEndpointAddress address,
             ConnectionHandler<RabbitMqConnection> connectionHandler,
@@ -60,19 +62,16 @@ namespace MassTransit.Transports.RabbitMq
 
             _connectionHandler.Use(connection =>
                 {
-                    BasicGetResult result = null;
+                    BasicDeliverEventArgs result = null;
                     try
                     {
-                        result = _consumer.Get();
+                        result = _consumer.Get(timeout);
                         if (result == null)
-                        {
-                            Thread.Sleep(10);
                             return;
-                        }
 
                         using (var body = new MemoryStream(result.Body, false))
                         {
-                            ReceiveContext context = ReceiveContext.FromBodyStream(body);
+                            ReceiveContext context = ReceiveContext.FromBodyStream(body, true);
                             context.SetMessageId(result.BasicProperties.MessageId ?? result.DeliveryTag.ToString());
                             result.BasicProperties.MessageId = context.MessageId;
                             context.SetInputAddress(_address);
@@ -127,7 +126,60 @@ namespace MassTransit.Transports.RabbitMq
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
+        }
+
+        public IEnumerable<Type> BindExchangesForPublisher(Type messageType, IMessageNameFormatter messageNameFormatter)
+        {
+            AddPublisherBinding();
+
+            IList<Type> messageTypes = new List<Type>();
+            _connectionHandler.Use(connection =>
+                {
+                    MessageName messageName = messageNameFormatter.GetMessageName(messageType);
+
+                    bool temporary = IsTemporaryMessageType(messageType);
+
+                    _publisher.ExchangeDeclare(messageName.ToString(), temporary);
+
+                    messageTypes.Add(messageType);
+
+                    foreach (Type type in messageType.GetMessageTypes().Skip(1))
+                    {
+                        MessageName interfaceName = messageNameFormatter.GetMessageName(type);
+
+                        bool isTemporary = IsTemporaryMessageType(type);
+
+                        _publisher.ExchangeBind(interfaceName.ToString(), messageName.ToString(), isTemporary, temporary);
+                        messageTypes.Add(type);
+                    }
+                });
+
+            return messageTypes;
+        }
+
+        static bool IsTemporaryMessageType(Type messageType)
+        {
+            return (!messageType.IsPublic && messageType.IsClass)
+                   || (messageType.IsGenericType
+                       && messageType.GetGenericArguments().Any(x => IsTemporaryMessageType(x)));
+        }
+
+        public void BindSubscriberExchange(IRabbitMqEndpointAddress address, string exchangeName, bool temporary)
+        {
+            AddPublisherBinding();
+            _connectionHandler.Use(connection =>
+                {
+                    _publisher.ExchangeBind(address.Name, exchangeName, false, temporary);
+                });
+        }
+
+        public void UnbindSubscriberExchange(string exchangeName)
+        {
+            AddPublisherBinding();
+            _connectionHandler.Use(connection =>
+            {
+                _publisher.ExchangeUnbind(_address.Name, exchangeName);
+            });            
         }
 
         void AddConsumerBinding()
@@ -140,12 +192,26 @@ namespace MassTransit.Transports.RabbitMq
             _connectionHandler.AddBinding(_consumer);
         }
 
-        void RemoveConsumer()
+        void AddPublisherBinding()
+        {
+            if (_publisher != null)
+                return;
+
+            _publisher = new RabbitMqPublisher(_address);
+
+            _connectionHandler.AddBinding(_publisher);
+        }
+
+        void RemoveConsumerBinding()
         {
             if (_consumer != null)
-            {
                 _connectionHandler.RemoveBinding(_consumer);
-            }
+        }
+
+        void RemovePublisherBinding()
+        {
+            if (_publisher != null)
+                _connectionHandler.RemoveBinding(_publisher);
         }
 
         void Dispose(bool disposing)
@@ -154,15 +220,11 @@ namespace MassTransit.Transports.RabbitMq
                 return;
             if (disposing)
             {
-                RemoveConsumer();
+                RemoveConsumerBinding();
+                RemovePublisherBinding();
             }
 
             _disposed = true;
-        }
-
-        ~InboundRabbitMqTransport()
-        {
-            Dispose(false);
         }
     }
 }

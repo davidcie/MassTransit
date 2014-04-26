@@ -41,7 +41,7 @@ namespace MassTransit.BusConfigurators
         /// Adds a configurator to the subscription coordinator builder
         /// </summary>
         /// <param name="configurator"></param>
-        void AddSubscriptionCoordinatorConfigurator(SubscriptionRouterBuilderConfigurator configurator);
+        void AddSubscriptionRouterConfigurator(SubscriptionRouterBuilderConfigurator configurator);
 
         /// <summary>
         /// Adds a configurator for the service bus builder to the configurator
@@ -63,6 +63,11 @@ namespace MassTransit.BusConfigurators
         /// </summary>
         /// <param name="network"></param>
         void SetNetwork(string network);
+
+        /// <summary>
+        /// Disable the performance counters
+        /// </summary>
+        void DisablePerformanceCounters();
 
         /// <summary>
         /// Specifies an action to call before a message is consumed. Implementors

@@ -51,6 +51,11 @@ namespace MassTransit.Testing.TestDecorators
             _context.SetCorrelationId(value);
         }
 
+        public void SetOriginalMessageId(string value)
+        {
+            _context.SetOriginalMessageId(value);
+        }
+
         public string RequestId
         {
             get { return _context.RequestId; }
@@ -245,6 +250,11 @@ namespace MassTransit.Testing.TestDecorators
             _context.SetMessageTypeConverter(messageTypeConverter);
         }
 
+        public void NotifyFault(Action faultAction)
+        {
+            _context.NotifyFault(faultAction);
+        }
+
         public void NotifySend(ISendContext context, IEndpointAddress address)
         {
             _context.NotifySend(context, address);
@@ -266,6 +276,11 @@ namespace MassTransit.Testing.TestDecorators
             _context.NotifyConsume(consumeContext, consumerType, correlationId);
         }
 
+        public void ExecuteFaultActions(IEnumerable<Action> faultActions)
+        {
+            _context.ExecuteFaultActions(faultActions);
+        }
+
         public IEnumerable<ISent> Sent
         {
             get { return _context.Sent; }
@@ -279,6 +294,21 @@ namespace MassTransit.Testing.TestDecorators
         public Guid Id
         {
             get { return _context.Id; }
+        }
+
+        public bool IsTransactional
+        {
+            get { return _context.IsTransactional; }
+        }
+
+        public string OriginalMessageId
+        {
+            get { return _context.OriginalMessageId; }
+        }
+
+        public IEnumerable<Action> GetFaultActions()
+        {
+            return _context.GetFaultActions();
         }
     }
 }

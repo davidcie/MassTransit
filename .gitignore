@@ -5,6 +5,7 @@ build_artifacts/*
 packages
 *.dotCover
 
+*.ncrunch*
 
 src/logs/*
 
@@ -24,6 +25,10 @@ src/Samples/HeavyLoad/logs
 *.bak
 *.orig
 
+NuGet.exe
+
+packages
+
 TestResult.xml
 submit.xml
 tests/*
@@ -34,5 +39,6 @@ doc/build/*
 
 # osx noise
 .DS_Store
+NuGet.Exe
 
 nuspecs/
